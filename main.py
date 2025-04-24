@@ -4,94 +4,14 @@ Main executable file
 """
 
 import argparse
-import logging
-import yaml
 import os
 from datetime import datetime
 
-from powerx.strategy import PowerXStrategy
-
-
-def setup_logging():
-    """Setup logging configuration"""
-    # Create logs directory if it doesn't exist
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
-    
-    # Setup logging
-    log_filename = f"logs/powerx_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_filename),
-            logging.StreamHandler()
-        ]
-    )
-    
-    return logging.getLogger('powerx')
-
-
-def load_config(config_file):
-    """
-    Load configuration from YAML file
-    
-    Args:
-        config_file (str): Path to config file
-        
-    Returns:
-        dict: Configuration dictionary
-    """
-    with open(config_file, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    return config
-
-
-def create_default_config():
-    """
-    Create default configuration file if it doesn't exist
-    
-    Returns:
-        str: Path to config file
-    """
-    config_file = 'config.yaml'
-    
-    if not os.path.exists(config_file):
-        config = {
-            'mt5': {
-                'login': None,
-                'password': None,
-                'server': None,
-            },
-            'strategy': {
-                'symbol': 'EURUSD',
-                'timeframe': 'M15',
-                'higher_timeframe': 'H1',
-                'rsi_period': 7,
-                'stoch_k_period': 14,
-                'stoch_smooth_period': 3,
-                'macd_fast_period': 12,
-                'macd_slow_period': 26,
-                'macd_signal_period': 9,
-                'atr_period': 14,
-                'supertrend_multiplier': 4.0,
-                'supertrend_period': 10,
-                'sl_multiplier': 1.5,
-                'tp_multiplier': 3.0,
-                'allow_longs': True,
-                'allow_shorts': True,
-            },
-            'execution': {
-                'check_interval': 5,  # seconds
-            }
-        }
-        
-        with open(config_file, 'w') as f:
-            yaml.dump(config, f, default_flow_style=False)
-    
-    return config_file
+from config.config_manager import ConfigManager
+from brokers.mt5_broker import MT5Broker
+from core.position_sizer import MonteCarloPositionSizer
+from strategies.powerx_strategy import PowerXStrategy
+from utils.logging_utils import setup_logging
 
 
 def main():
@@ -116,52 +36,88 @@ def main():
     if args.config:
         config_file = args.config
     else:
-        config_file = create_default_config()
-        logger.info(f"Created default config file: {config_file}")
+        config_file = 'config.yaml'
+        if not os.path.exists(config_file):
+            # Create default config if it doesn't exist
+            default_config = {
+                'mt5': {
+                    'login': None,
+                    'password': None,
+                    'server': None,
+                },
+                'strategy': {
+                    'symbol': 'EURUSD',
+                    'timeframe': 'M15',
+                    'higher_timeframe': 'H1',
+                    'rsi_period': 7,
+                    'stoch_k_period': 14,
+                    'stoch_smooth_period': 3,
+                    'macd_fast_period': 12,
+                    'macd_slow_period': 26,
+                    'macd_signal_period': 9,
+                    'atr_period': 14,
+                    'supertrend_multiplier': 4.0,
+                    'supertrend_period': 10,
+                    'sl_multiplier': 1.5,
+                    'tp_multiplier': 3.0,
+                    'allow_longs': True,
+                    'allow_shorts': True,
+                },
+                'execution': {
+                    'check_interval': 5,  # seconds
+                }
+            }
+            ConfigManager.create_default_config(config_file, default_config)
+            logger.info(f"Created default config file: {config_file}")
     
-    config = load_config(config_file)
+    # Load config
+    config = ConfigManager.load_config(config_file)
     logger.info(f"Loaded configuration from {config_file}")
     
     # Override config with command line arguments
+    strategy_config = config.get('strategy', {})
     if args.symbol:
-        config['strategy']['symbol'] = args.symbol
+        strategy_config['symbol'] = args.symbol
     if args.timeframe:
-        config['strategy']['timeframe'] = args.timeframe
+        strategy_config['timeframe'] = args.timeframe
     if args.higher_timeframe:
-        config['strategy']['higher_timeframe'] = args.higher_timeframe
+        strategy_config['higher_timeframe'] = args.higher_timeframe
+    
+    mt5_config = config.get('mt5', {})
     if args.login:
-        config['mt5']['login'] = args.login
+        mt5_config['login'] = args.login
     if args.password:
-        config['mt5']['password'] = args.password
+        mt5_config['password'] = args.password
     if args.server:
-        config['mt5']['server'] = args.server
+        mt5_config['server'] = args.server
+    
+    # Get strategy parameters
+    strategy_params = ConfigManager.get_strategy_params(config)
+    
+    # Create broker instance
+    broker = MT5Broker(
+        login=mt5_config.get('login'),
+        password=mt5_config.get('password'),
+        server=mt5_config.get('server')
+    )
+    
+    # Create position sizer
+    position_sizer = MonteCarloPositionSizer()
     
     # Create strategy
     strategy = PowerXStrategy(
-        symbol=config['strategy']['symbol'],
-        timeframe=config['strategy']['timeframe'],
-        higher_timeframe=config['strategy']['higher_timeframe'],
-        rsi_period=config['strategy']['rsi_period'],
-        stoch_k_period=config['strategy']['stoch_k_period'],
-        stoch_smooth_period=config['strategy']['stoch_smooth_period'],
-        macd_fast_period=config['strategy']['macd_fast_period'],
-        macd_slow_period=config['strategy']['macd_slow_period'],
-        macd_signal_period=config['strategy']['macd_signal_period'],
-        atr_period=config['strategy']['atr_period'],
-        supertrend_multiplier=config['strategy']['supertrend_multiplier'],
-        supertrend_period=config['strategy']['supertrend_period'],
-        sl_multiplier=config['strategy']['sl_multiplier'],
-        tp_multiplier=config['strategy']['tp_multiplier'],
-        allow_longs=config['strategy']['allow_longs'],
-        allow_shorts=config['strategy']['allow_shorts'],
-        mt5_login=config['mt5']['login'],
-        mt5_password=config['mt5']['password'],
-        mt5_server=config['mt5']['server']
+        broker=broker,
+        position_sizer=position_sizer,
+        symbol=strategy_params['symbol'],
+        timeframe=strategy_params['timeframe'],
+        higher_timeframe=strategy_params['higher_timeframe'],
+        params=strategy_params
     )
     
     # Run strategy
     try:
-        strategy.run(interval_seconds=config['execution']['check_interval'])
+        execution_params = ConfigManager.get_execution_params(config)
+        strategy.run(interval_seconds=execution_params['check_interval'])
     except KeyboardInterrupt:
         logger.info("Strategy stopped by user")
     except Exception as e:
