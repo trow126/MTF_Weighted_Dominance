@@ -1,0 +1,63 @@
+# PowerX Strategy with Basic Monte Carlo - Backtest Configuration
+
+# Data source: 'synthetic', 'mt5', or 'csv'
+data_source: 'synthetic'
+
+# Synthetic data parameters
+num_bars: 1000
+trend_strength: 0.6
+volatility: 1.0
+
+# MT5 data parameters (if using MT5)
+days_to_load: 365
+mt5:
+  login: null
+  password: null
+  server: null
+
+# CSV data parameters (if using CSV)
+data:
+  main_file: 'data.csv'
+  higher_tf_file: null
+
+# Backtest parameters
+initial_capital: 10000.0
+commission: 0.0
+slippage: 0.0
+
+# Strategy parameters
+strategy:
+  symbol: 'EURUSD'
+  timeframe: 'H1'
+  higher_timeframe: 'D1'
+  rsi_period: 7
+  stoch_k_period: 14
+  stoch_smooth_period: 3
+  macd_fast_period: 12
+  macd_slow_period: 26
+  macd_signal_period: 9
+  atr_period: 14
+  supertrend_multiplier: 4.0
+  supertrend_period: 10
+  sl_multiplier: 1.5
+  tp_multiplier: 3.0
+  allow_longs: true
+  allow_shorts: true
+
+# Monte Carlo analysis
+monte_carlo:
+  enabled: true
+  num_simulations: 1000
+  confidence_level: 0.95
+
+# Plotting
+plot:
+  enabled: true
+  show: true
+  save: false
+  file: 'backtest_results.png'
+
+# Save results
+save_results: false
+results_file: 'backtest_results.csv'
+trades_file: 'backtest_trades.csv'

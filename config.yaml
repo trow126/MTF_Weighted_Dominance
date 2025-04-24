@@ -1,0 +1,25 @@
+mt5:
+  login: null  # MT5アカウントログイン
+  password: null  # MT5アカウントパスワード
+  server: null  # MT5サーバー名
+
+strategy:
+  symbol: EURUSD  # 取引通貨ペア
+  timeframe: M15  # 取引時間足
+  higher_timeframe: H1  # 上位時間足
+  rsi_period: 7  # RSI期間
+  stoch_k_period: 14  # ストキャスティクス %K期間
+  stoch_smooth_period: 3  # ストキャスティクスの平滑化期間
+  macd_fast_period: 12  # MACD速い期間
+  macd_slow_period: 26  # MACD遅い期間
+  macd_signal_period: 9  # MACDシグナル期間
+  atr_period: 14  # ATR期間
+  supertrend_multiplier: 4.0  # SuperTrend乗数
+  supertrend_period: 10  # SuperTrend期間
+  sl_multiplier: 1.5  # ストップロスATR乗数
+  tp_multiplier: 3.0  # テイクプロフィットATR乗数
+  allow_longs: true  # ロングエントリーを許可
+  allow_shorts: true  # ショートエントリーを許可
+
+execution:
+  check_interval: 5  # チェック間隔（秒）
